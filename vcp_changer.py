@@ -3,15 +3,6 @@ import configparser
 import os.path
 import ctypes
 
-ini_filename = 'port_config.ini'
-
-error_title = "Ошибка"
-success_title = "Успех!"
-error_permission_text = "Недостаточно прав для работы. Откройте программу в режиме администратора!."
-error_config_not_found_text = f"Упс! Похоже вы потеряли файл {ini_filename} , ничего страшного, мы создадим вам новый.\n" \
-                         f"Заполните его и перезапустите скрипт."
-success_message_text = "Переподключите устройства или перезагрузите компьютер, чтобы изменения вступили в силу."
-
 
 def get_registry_subkeys_list(registry_key):
     subkeys = []
@@ -25,7 +16,6 @@ def get_registry_subkeys_list(registry_key):
     except WindowsError:
         return subkeys
 
-
 def set_reg(name, value, reg_path):
     try:
         winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, reg_path)
@@ -34,11 +24,10 @@ def set_reg(name, value, reg_path):
         winreg.CloseKey(registry_key)
         return True
     except PermissionError:
-        ctypes.windll.user32.MessageBoxW(0, error_permission_text, error_title, 0)
+        ctypes.windll.user32.MessageBoxW(0, message_error_permission, title_error, 0)
         exit()
     except WindowsError:
         return False
-
 
 def get_reg(name, reg_path):
     try:
@@ -50,12 +39,22 @@ def get_reg(name, reg_path):
         return None
 
 
+ini_filename = 'port_config.ini'
+
+title_error = "Ошибка"
+title_success = "Успех!"
+message_error_permission = "Недостаточно прав для работы. Откройте программу в режиме администратора!."
+message_error_config_not_found = f"Упс! Похоже вы потеряли файл {ini_filename} , ничего страшного, мы создадим вам новый.\n" \
+                         f"Заполните его и перезапустите скрипт."
+message_success = "Переподключите устройства или перезагрузите компьютер, чтобы изменения вступили в силу."
+
+
 config = configparser.ConfigParser()
 
 if os.path.isfile(ini_filename):
     config.read(ini_filename)
 else:
-    ctypes.windll.user32.MessageBoxW(0, error_config_not_found_text, error_title, 0)
+    ctypes.windll.user32.MessageBoxW(0, message_error_config_not_found, title_error, 0)
     config['Device 1'] = {'Device-id': 'VID_10C4&PID_EA60',
                           'Port': 'COM9'
                           }
@@ -72,7 +71,6 @@ for device in config:
         device_port = config[device]['port']
     except:
         continue
-    # print(f'Setting up devices by ID: {device_id} to PORT: {device_port}')
 
     device_registry_key = 'SYSTEM\\CurrentControlSet\\Enum\\USB\\' + device_id + '\\'
     cur_devices = get_registry_subkeys_list(device_registry_key)
@@ -89,9 +87,5 @@ for device in config:
             correct_dev_name = dev_name.replace(dev_name[dev_name.find('(COM'):], f'({device_port})')
             set_reg('FriendlyName', correct_dev_name, device_key)
 
-            # print(f'Successfully setting device with identity: {phys_device}')
-    else:
-        # print(f'Can\'t find devices by ID: {device_id}. Skipping.')
-        pass
 
-ctypes.windll.user32.MessageBoxW(0, success_message_text, success_title, 0)
+ctypes.windll.user32.MessageBoxW(0, message_success, title_success, 0)
